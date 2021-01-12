@@ -1,5 +1,5 @@
 bl_info = {
-    "name": "",
+    "name": "DK Tools",
     "author": "DarkosDK",
     "version": (1, 0),
     "blender": (2, 90, 0),
