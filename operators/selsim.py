@@ -53,7 +53,7 @@ class DK_OP_Select_Similar(bpy.types.Operator):
 
         # Split mesh by elements
         elements = split_elements(bm)
-        # print(elements)
+        # print("Elements count: {}".format(len(elements)))
 
         # Check if user select edges in several (not in one) elements
         element_check = []

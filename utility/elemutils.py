@@ -69,6 +69,7 @@ class BmeshElement:
             average_normal = sum(normals, Vector((0.0, 0.0, 0.0)))/len(normals)
 
         if average_normal == Vector((0.0, 0.0, 0.0)):
+            print("Alternative Normal")
             average_normal = self.faces[0].normal.normalized()
 
         return average_normal.normalized()
@@ -216,7 +217,7 @@ def split_elements(bm: bmesh.types.BMesh) -> dict:
     # Set tags to edges
     for e in bm.edges:
         e.tag = False
-    edges = [edge for edge in bm.edges]
+    edges = [edge for edge in bm.edges if edge.hide == False]
 
     # Fill elements dict - put all edges, separate by connected elements
     edges_to_check = edges.copy()
