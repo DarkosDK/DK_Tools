@@ -9,6 +9,7 @@ class BmeshElement:
         self.element_index = index
         self.bm = bm
         self.edges = edges
+        # self.edges_pos = self.define_edges_pos()
         self.faces = self.define_faces()
         self.verts = self.define_verts()
         self.pivot = self.define_pivot()
@@ -34,6 +35,15 @@ class BmeshElement:
         faces = list(set(faces))
 
         return sorted(faces, key=lambda x: x.index)
+
+    def define_edges_pos(self):
+        e_pos = dict()
+        for e in self.edges:
+            verts = [v.co for v in e.verts]
+            av_verts = sum(verts, Vector((0.0, 0.0, 0.0)))/2.0
+            e_pos[e.index] = av_verts
+
+        return e_pos
 
     def define_verts(self):
         vertices = []
@@ -286,3 +296,12 @@ def find_similar_element(bm: bmesh.types.BMesh, index: int) -> list:
     Find similar elements in bmesh
     """
     pass
+
+
+def select_edges_by_verts(bm: bmesh.types.BMesh, vs: list):
+    """
+    Select edges in bmesh by selected verts indexes (vs)
+    """
+    for e in bm.edges:
+        if (e.verts[0].index in vs) and (e.verts[1].index in vs):
+            e.select = True

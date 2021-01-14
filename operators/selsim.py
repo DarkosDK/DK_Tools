@@ -3,6 +3,7 @@ import bmesh
 from mathutils import Vector, Matrix, kdtree
 from ..utility.elemutils import BmeshElement
 from ..utility.elemutils import split_elements
+from ..utility.elemutils import select_edges_by_verts
 
 algorithms = [
     ('By Topology', 'By Topology', 'Select by topology'),
@@ -43,6 +44,12 @@ class DK_OP_Select_Similar(bpy.types.Operator):
         # Set containers
         edges_sel = [edge for edge in bm.edges if edge.select]  # Selected edges indecis
         verts_sel = [vert for vert in bm.verts if vert.select]
+        edges_sel_poses = dict()
+        for e in edges_sel:
+            verts = [v.co for v in e.verts]
+            av_vert = sum(verts, Vector((0.0, 0.0, 0.0)))/2
+            edges_sel_poses[e.index] = av_vert
+
         edges = [edge for edge in bm.edges]  # All edges indecis
         # elements = dict()  # Conteiner for elements
         # elem_index = 0  # Start index for elements
@@ -155,6 +162,7 @@ class DK_OP_Select_Similar(bpy.types.Operator):
 
             # Return bmesh
             bmesh.update_edit_mesh(mesh)
+
         elif self.algorithm == 'By Indexes':
             to_select = []
             sel_pos = sel_element.find_sel_indexes()
@@ -164,6 +172,8 @@ class DK_OP_Select_Similar(bpy.types.Operator):
                     to_select.append(el.edges[pos].index)
 
             bm_init.edges.ensure_lookup_table()
+
+
             for i in to_select:
                 bm_init.edges[i].select = True
 
@@ -190,25 +200,32 @@ class DK_OP_Select_Similar(bpy.types.Operator):
                 bmesh.ops.transform(bm, matrix=m, verts=i.verts)
 
                 # create kd-tree
-                size = len(i.verts)
+                size = len(i.edges)
                 kd = kdtree.KDTree(size)
-                for v in i.verts:
-                    kd.insert(v.co, v.index)
+                new_edges_pos = i.define_edges_pos()
+                for key in new_edges_pos.keys():
+                    kd.insert(new_edges_pos[key], key)
                 kd.balance()
 
                 # define closes vertices to selected 
-                for i in verts_sel:
-                    co, index, dist = kd.find(i.co)
+                for e in edges_sel_poses.keys():
+                    print("-- -- --")
+                    print(e)
+                    co, index, dist = kd.find(edges_sel_poses[e])
                     to_select.append(index)
 
             # print("To Select: {}".format(to_select))
 
             bm_init.verts.ensure_lookup_table()
+            bm_init.edges.ensure_lookup_table()
 
             for i in to_select:
-                bm_init.verts[i].select = True
+                bm_init.edges[i].select = True
 
-            bm_init.select_flush(True)
+            # select edges
+            # select_edges_by_verts(bm_init, to_select)
+
+            # bm_init.select_flush(True)
 
             # Return bmesh
             bmesh.update_edit_mesh(mesh)
