@@ -16,8 +16,11 @@ class BmeshElement:
         self.tangent = self.define_tangent()
         self.up = self.define_up()
         self.matrix = self.define_transform()
+        self.matrix_2 = self.define_transform_by_dist()
         self.ident = self.define_ident()
         self.scale_factor = self.define_scale()
+
+        self.max_vert_dist = self.define_max_vert_dist()[0]
         
 
     def define_faces(self):
@@ -55,6 +58,18 @@ class BmeshElement:
         pivot = sum(all_faces_pos, Vector((0.0, 0.0, 0.0)))/count
         
         return pivot
+
+    def define_max_vert_dist(self):
+        max_dist = 0
+        max_verts = []
+        for i in self.verts:
+            dist = (i.co - self.pivot).length
+            if dist > max_dist:
+                max_dist = dist
+        max_verts = [v for v in self.verts if (v.co - self.pivot).length > max_dist - 0.002 and (v.co - self.pivot).length < max_dist + 0.002]
+        # print("Max vertecis dist: {}".format(max))
+
+        return max_verts
 
     def define_normal(self):
         """
@@ -193,7 +208,25 @@ class BmeshElement:
         """
         m = Matrix((self.up, self.tangent, self.normal)).to_4x4()
         return m
-        
+
+    def define_transform_by_dist(self):
+        verts = self.define_max_vert_dist()
+        print("Max vertex count: {}".format(len(verts)))
+        print("Pivot: {}".format(self.pivot))
+        points = [v.co for v in verts]
+        av_point = sum(points, Vector((0.0, 0.0, 0.0)))/len(points)
+        print("AV_Point: {}".format(av_point))
+        normals = [v.normal for v in verts]
+        av_normal = (sum(normals, Vector((0.0, 0.0, 0.0)))/len(normals)).normalized()
+        print("AV_Normal: {}".format(av_normal))
+        dist_to_point = (av_point - self.pivot).normalized()
+        tangent = av_normal.cross(dist_to_point).normalized()
+        up = tangent.cross(av_normal).normalized()
+
+        m_matrix = Matrix((up, tangent, av_normal)).to_4x4()
+
+        return m_matrix
+
     def find_sel_indexes(self):
         positions = []
         for pos, e in enumerate(self.edges):

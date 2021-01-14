@@ -7,6 +7,7 @@ from ..utility.elemutils import split_elements
 algorithms = [
     ('By Topology', 'By Topology', 'Select by topology'),
     ('By Indexes', 'By Indexes', 'Select by indexes'),
+    ('By Distance', 'By Distance', 'Select by distance'),
 ]
 
 
@@ -37,7 +38,7 @@ class DK_OP_Select_Similar(bpy.types.Operator):
         ob = context.active_object
         mesh = context.object.data
         bm_init = bmesh.from_edit_mesh(mesh) # bm_init
-        bm = bm_init.copy()
+        bm = bm_init.copy()  # change to bm = bm_init.copy() for prodaction and bm = bm_init to tests
 
         # Set containers
         edges_sel = [edge for edge in bm.edges if edge.select]  # Selected edges indecis
@@ -154,7 +155,7 @@ class DK_OP_Select_Similar(bpy.types.Operator):
 
             # Return bmesh
             bmesh.update_edit_mesh(mesh)
-        else:
+        elif self.algorithm == 'By Indexes':
             to_select = []
             sel_pos = sel_element.find_sel_indexes()
 
@@ -170,5 +171,46 @@ class DK_OP_Select_Similar(bpy.types.Operator):
 
             # Return bmesh
             bmesh.update_edit_mesh(mesh)
-        
+        else:
+            # Define selection in similar elements
+            to_select = []
+
+            for i in similar_elements:
+                print("Max dists: {}".format(i.define_max_vert_dist()))
+                print("----------")
+                a = i.define_transform_by_dist()
+                print("--init--")
+                b = sel_element.define_transform_by_dist()
+                # print("Element {} scale: {}".format(i.element_index, i.scale_factor))
+                # print("Element {} normal: {}".format(i.element_index, i.normal))
+                # print("Element {} up: {}".format(i.element_index, i.up))
+                scale = sel_element.scale_factor/i.scale_factor
+                m_scale = Matrix.Scale(scale, 4)
+                m = Matrix.Translation(sel_element.pivot) @sel_element.matrix_2.transposed() @ m_scale @ i.matrix_2 @ Matrix.Translation(-i.pivot)
+                bmesh.ops.transform(bm, matrix=m, verts=i.verts)
+
+                # create kd-tree
+                size = len(i.verts)
+                kd = kdtree.KDTree(size)
+                for v in i.verts:
+                    kd.insert(v.co, v.index)
+                kd.balance()
+
+                # define closes vertices to selected 
+                for i in verts_sel:
+                    co, index, dist = kd.find(i.co)
+                    to_select.append(index)
+
+            # print("To Select: {}".format(to_select))
+
+            bm_init.verts.ensure_lookup_table()
+
+            for i in to_select:
+                bm_init.verts[i].select = True
+
+            bm_init.select_flush(True)
+
+            # Return bmesh
+            bmesh.update_edit_mesh(mesh)
+
         return {'FINISHED'}
