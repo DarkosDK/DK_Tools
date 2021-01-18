@@ -3,10 +3,12 @@ import bmesh
 from mathutils import Vector, Matrix, kdtree
 from ..utility.elemutils import BmeshElement
 from ..utility.elemutils import split_elements
+from ..utility.elemutils import select_edges_by_verts
 
 algorithms = [
     ('By Topology', 'By Topology', 'Select by topology'),
     ('By Indexes', 'By Indexes', 'Select by indexes'),
+    ('By Distance', 'By Distance', 'Select by distance'),
 ]
 
 
@@ -19,7 +21,7 @@ class DK_OP_Select_Similar(bpy.types.Operator):
     algorithm: bpy.props.EnumProperty(
         items=algorithms,
         name="Algorithm",
-        default='By Topology',
+        default='By Distance',
     )
 
     @classmethod
@@ -37,14 +39,18 @@ class DK_OP_Select_Similar(bpy.types.Operator):
         ob = context.active_object
         mesh = context.object.data
         bm_init = bmesh.from_edit_mesh(mesh) # bm_init
-        bm = bm_init.copy()
+        bm = bm_init.copy()  # change to bm = bm_init.copy() for prodaction and bm = bm_init to tests
 
         # Set containers
         edges_sel = [edge for edge in bm.edges if edge.select]  # Selected edges indecis
         verts_sel = [vert for vert in bm.verts if vert.select]
+        edges_sel_poses = dict()
+        for e in edges_sel:
+            verts = [v.co for v in e.verts]
+            av_vert = sum(verts, Vector((0.0, 0.0, 0.0)))/2
+            edges_sel_poses[e.index] = av_vert
+
         edges = [edge for edge in bm.edges]  # All edges indecis
-        # elements = dict()  # Conteiner for elements
-        # elem_index = 0  # Start index for elements
 
         # Check if user dont select edges
         if len(edges_sel) == 0:
@@ -53,7 +59,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
 
         # Split mesh by elements
         elements = split_elements(bm)
-        # print(elements)
 
         # Check if user select edges in several (not in one) elements
         element_check = []
@@ -95,9 +100,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
         for ind in elements.keys():
             my_element = BmeshElement(bm, elements[ind], ind)
             my_elements.append(my_element)
-            # print("Element {}: Faces: {}".format(my_element.element_index, [f.index for f in my_element.faces]))
-            # print("Element {}: Pivot: {}".format(my_element.element_index, ob.matrix_world @ my_element.pivot))
-            # print("Element {}: Identificator: {}".format(my_element.element_index, my_element.ident))
             if my_element.is_active(edges_sel[0].index):
                 sel_element = my_element
 
@@ -112,8 +114,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
             self.report({'INFO'}, "Not find similar elements")
             return {'CANCELLED'}
 
-        print("Active element is: {}".format(sel_element.element_index))
-        print(sel_element.find_sel_indexes())
         # print("Active element scale: {}".format(sel_element.scale_factor))
         # print("Active element normal: {}".format(sel_element.normal))
         # print("Active element up: {}".format(sel_element.up))
@@ -143,8 +143,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
                     co, index, dist = kd.find(i.co)
                     to_select.append(index)
 
-            # print("To Select: {}".format(to_select))
-
             bm_init.verts.ensure_lookup_table()
 
             for i in to_select:
@@ -154,7 +152,8 @@ class DK_OP_Select_Similar(bpy.types.Operator):
 
             # Return bmesh
             bmesh.update_edit_mesh(mesh)
-        else:
+
+        elif self.algorithm == 'By Indexes':
             to_select = []
             sel_pos = sel_element.find_sel_indexes()
 
@@ -163,6 +162,7 @@ class DK_OP_Select_Similar(bpy.types.Operator):
                     to_select.append(el.edges[pos].index)
 
             bm_init.edges.ensure_lookup_table()
+
             for i in to_select:
                 bm_init.edges[i].select = True
 
@@ -170,5 +170,45 @@ class DK_OP_Select_Similar(bpy.types.Operator):
 
             # Return bmesh
             bmesh.update_edit_mesh(mesh)
-        
+        else:
+            # Define selection in similar elements
+            to_select = []
+
+            for i in similar_elements:
+                a = i.define_transform_by_dist()
+                b = sel_element.define_transform_by_dist()
+                scale = sel_element.scale_factor/i.scale_factor
+                m_scale = Matrix.Scale(scale, 4)
+                m = Matrix.Translation(sel_element.pivot) @sel_element.matrix_2.transposed() @ m_scale @ i.matrix_2 @ Matrix.Translation(-i.pivot)
+                bmesh.ops.transform(bm, matrix=m, verts=i.verts)
+
+                # create kd-tree
+                size = len(i.edges)
+                kd = kdtree.KDTree(size)
+                new_edges_pos = i.define_edges_pos()
+                for key in new_edges_pos.keys():
+                    kd.insert(new_edges_pos[key], key)
+                kd.balance()
+
+                # define closes vertices to selected 
+                for e in edges_sel_poses.keys():
+                    co, index, dist = kd.find(edges_sel_poses[e])
+                    to_select.append(index)
+
+            # print("To Select: {}".format(to_select))
+
+            bm_init.verts.ensure_lookup_table()
+            bm_init.edges.ensure_lookup_table()
+
+            for i in to_select:
+                bm_init.edges[i].select = True
+
+            # select edges
+            # select_edges_by_verts(bm_init, to_select)
+
+            # bm_init.select_flush(True)
+
+            # Return bmesh
+            bmesh.update_edit_mesh(mesh)
+
         return {'FINISHED'}
