@@ -21,7 +21,7 @@ class DK_OP_Select_Similar(bpy.types.Operator):
     algorithm: bpy.props.EnumProperty(
         items=algorithms,
         name="Algorithm",
-        default='By Topology',
+        default='By Distance',
     )
 
     @classmethod
@@ -51,8 +51,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
             edges_sel_poses[e.index] = av_vert
 
         edges = [edge for edge in bm.edges]  # All edges indecis
-        # elements = dict()  # Conteiner for elements
-        # elem_index = 0  # Start index for elements
 
         # Check if user dont select edges
         if len(edges_sel) == 0:
@@ -61,7 +59,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
 
         # Split mesh by elements
         elements = split_elements(bm)
-        # print("Elements count: {}".format(len(elements)))
 
         # Check if user select edges in several (not in one) elements
         element_check = []
@@ -103,9 +100,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
         for ind in elements.keys():
             my_element = BmeshElement(bm, elements[ind], ind)
             my_elements.append(my_element)
-            # print("Element {}: Faces: {}".format(my_element.element_index, [f.index for f in my_element.faces]))
-            # print("Element {}: Pivot: {}".format(my_element.element_index, ob.matrix_world @ my_element.pivot))
-            # print("Element {}: Identificator: {}".format(my_element.element_index, my_element.ident))
             if my_element.is_active(edges_sel[0].index):
                 sel_element = my_element
 
@@ -120,8 +114,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
             self.report({'INFO'}, "Not find similar elements")
             return {'CANCELLED'}
 
-        print("Active element is: {}".format(sel_element.element_index))
-        print(sel_element.find_sel_indexes())
         # print("Active element scale: {}".format(sel_element.scale_factor))
         # print("Active element normal: {}".format(sel_element.normal))
         # print("Active element up: {}".format(sel_element.up))
@@ -151,8 +143,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
                     co, index, dist = kd.find(i.co)
                     to_select.append(index)
 
-            # print("To Select: {}".format(to_select))
-
             bm_init.verts.ensure_lookup_table()
 
             for i in to_select:
@@ -173,7 +163,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
 
             bm_init.edges.ensure_lookup_table()
 
-
             for i in to_select:
                 bm_init.edges[i].select = True
 
@@ -186,14 +175,8 @@ class DK_OP_Select_Similar(bpy.types.Operator):
             to_select = []
 
             for i in similar_elements:
-                print("Max dists: {}".format(i.define_max_vert_dist()))
-                print("----------")
                 a = i.define_transform_by_dist()
-                print("--init--")
                 b = sel_element.define_transform_by_dist()
-                # print("Element {} scale: {}".format(i.element_index, i.scale_factor))
-                # print("Element {} normal: {}".format(i.element_index, i.normal))
-                # print("Element {} up: {}".format(i.element_index, i.up))
                 scale = sel_element.scale_factor/i.scale_factor
                 m_scale = Matrix.Scale(scale, 4)
                 m = Matrix.Translation(sel_element.pivot) @sel_element.matrix_2.transposed() @ m_scale @ i.matrix_2 @ Matrix.Translation(-i.pivot)
@@ -209,8 +192,6 @@ class DK_OP_Select_Similar(bpy.types.Operator):
 
                 # define closes vertices to selected 
                 for e in edges_sel_poses.keys():
-                    print("-- -- --")
-                    print(e)
                     co, index, dist = kd.find(edges_sel_poses[e])
                     to_select.append(index)
 

@@ -94,7 +94,7 @@ class BmeshElement:
             average_normal = sum(normals, Vector((0.0, 0.0, 0.0)))/len(normals)
 
         if average_normal == Vector((0.0, 0.0, 0.0)):
-            print("Alternative Normal")
+            # print("Alternative Normal")
             average_normal = self.faces[0].normal.normalized()
 
         return average_normal.normalized()
@@ -221,14 +221,14 @@ class BmeshElement:
 
     def define_transform_by_dist(self):
         verts = self.define_max_vert_dist()
-        print("Max vertex count: {}".format(len(verts)))
-        print("Pivot: {}".format(self.pivot))
+        # print("Max vertex count: {}".format(len(verts)))
+        # print("Pivot: {}".format(self.pivot))
         points = [v.co for v in verts]
         av_point = sum(points, Vector((0.0, 0.0, 0.0)))/len(points)
-        print("AV_Point: {}".format(av_point))
+        # print("AV_Point: {}".format(av_point))
         normals = [v.normal for v in verts]
         av_normal = (sum(normals, Vector((0.0, 0.0, 0.0)))/len(normals)).normalized()
-        print("AV_Normal: {}".format(av_normal))
+        # print("AV_Normal: {}".format(av_normal))
         dist_to_point = (av_point - self.pivot).normalized()
         tangent = av_normal.cross(dist_to_point).normalized()
         up = tangent.cross(av_normal).normalized()
