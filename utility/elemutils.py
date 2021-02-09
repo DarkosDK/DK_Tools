@@ -9,7 +9,6 @@ class BmeshElement:
         self.element_index = index
         self.bm = bm
         self.edges = edges
-        # self.edges_pos = self.define_edges_pos()
         self.faces = self.define_faces()
         self.verts = self.define_verts()
         self.pivot = self.define_pivot()
@@ -22,7 +21,6 @@ class BmeshElement:
         self.scale_factor = self.define_scale()
 
         self.max_vert_dist = self.define_max_vert_dist()[0]
-        
 
     def define_faces(self):
         """
@@ -66,7 +64,7 @@ class BmeshElement:
         if count == 0:
             count = 1
         pivot = sum(all_faces_pos, Vector((0.0, 0.0, 0.0)))/count
-        
+
         return pivot
 
     def define_max_vert_dist(self):
@@ -104,26 +102,6 @@ class BmeshElement:
         Define up vector base on the normal and X-axis
         """
 
-        """
-        x_axis = Vector((1.0, 0.0, 0.0))
-        tangents = []
-        average_tangent = Vector((0.0, 0.0, 0.0))
-        for face in self.faces:
-            tangent = face.calc_tangent_vert_diagonal()
-            tangents.append(tangent)
-        if len(tangents) != 0:
-            average_t = sum(tangents, Vector((0.0, 0.0, 0.0)))/len(tangents)
-            average_tangent_01 = average_t.cross(self.normal)
-            average_tangent = self.normal.cross(average_tangent_01).normalized()
-        """
-        """
-        # variant 02
-        t1 = x_axis.cross(self.normal).normalized()
-        t2 = self.normal.cross(t1).normalized()
-        # return t2
-        """
-        # variant 03
-
         big_faces = []
         max_face = 0
         for face in self.faces:
@@ -145,22 +123,6 @@ class BmeshElement:
             average_tangent_01 = average_t.cross(self.normal)
             average_tangent = self.normal.cross(average_tangent_01).normalized()
 
-        # variant 04
-        """
-        big_faces = []
-        max_face = 0
-        for face in self.faces:
-            if face.calc_area() > max_face:
-                max_face = face.calc_area()
-        for face in self.faces:
-            if face.calc_area() == max_face:
-                big_faces.append(face)
-        big = sorted(big_faces, key=lambda x: x.index)
-        b = big[0]
-        average_t = b.calc_tangent_vert_diagonal()
-        average_tangent_01 = average_t.cross(self.normal)
-        average_tangent = self.normal.cross(average_tangent_01).normalized()
-        """
         return average_tangent
 
     def define_up(self):
@@ -221,14 +183,10 @@ class BmeshElement:
 
     def define_transform_by_dist(self):
         verts = self.define_max_vert_dist()
-        # print("Max vertex count: {}".format(len(verts)))
-        # print("Pivot: {}".format(self.pivot))
         points = [v.co for v in verts]
         av_point = sum(points, Vector((0.0, 0.0, 0.0)))/len(points)
-        # print("AV_Point: {}".format(av_point))
         normals = [v.normal for v in verts]
         av_normal = (sum(normals, Vector((0.0, 0.0, 0.0)))/len(normals)).normalized()
-        # print("AV_Normal: {}".format(av_normal))
         dist_to_point = (av_point - self.pivot).normalized()
         tangent = av_normal.cross(dist_to_point).normalized()
         up = tangent.cross(av_normal).normalized()
@@ -244,8 +202,8 @@ class BmeshElement:
                 positions.append(self.edges.index(e))
         return positions
 
-
 # -- End class
+
 
 # Utils Functions
 def split_elements(bm: bmesh.types.BMesh) -> dict:
