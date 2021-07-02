@@ -1,4 +1,4 @@
-from utility.functions import create_vector_from_3_points
+from ..utility.functions import create_vector_from_3_points
 import bpy
 import bmesh
 from math import radians
