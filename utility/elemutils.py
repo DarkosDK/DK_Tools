@@ -198,7 +198,7 @@ class BmeshElement:
     def find_sel_indexes(self):
         positions = []
         for pos, e in enumerate(self.edges):
-            if e.select == True:
+            if e.select:
                 positions.append(self.edges.index(e))
         return positions
 
@@ -218,7 +218,7 @@ def split_elements(bm: bmesh.types.BMesh) -> dict:
     # Set tags to edges
     for e in bm.edges:
         e.tag = False
-    edges = [edge for edge in bm.edges if edge.hide == False]
+    edges = [edge for edge in bm.edges if (not edge.hide)]
 
     # Fill elements dict - put all edges, separate by connected elements
     edges_to_check = edges.copy()
